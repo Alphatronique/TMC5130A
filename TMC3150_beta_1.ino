@@ -1,4 +1,4 @@
-//#include <SimpleModbusSlave.h>
+#include <SimpleModbusSlave.h>
 #include "TMC_SPI.h"
 
 /* 
@@ -52,18 +52,13 @@ enum
 {     
   // just add or remove registers and your good to go...
   // The first register starts at address 0
-  TMC5130_ADRESS_WRITE,
-  TMC5130_BYTE_1_WRITE,
-  TMC5130_BYTE_2_WRITE,
-  TMC5130_BYTE_3_WRITE,
-  TMC5130_BYTE_4_WRITE,
-  
+  Modbus_Move_mm,                 // good up to 65meter !!
   TMC5130_ADRESS_READ,
-  TMC5130_BYTE_1_READ,
-  TMC5130_BYTE_2_READ,
-  TMC5130_BYTE_3_READ,
-  TMC5130_BYTE_4_READ, 
+  TMC5130_ADRESS_WRITE,
+  TMC5130_LOW_WORD,
+  TMC5130_HI_WORD,
   
+    
   HOLDING_REGS_SIZE // leave this one
   // total number of registers for function 3 and 16 share the same register array
   // i.e. the same address space
@@ -72,6 +67,12 @@ enum
 unsigned int holdingRegs[HOLDING_REGS_SIZE]; // function 3 and 16 register array
 ////////////////////////////////////////////////////////////
 
+
+uint32_t SPI_Reister ;
+uint32_t SPI_Reister_old ;
+uint16_t Move_mm ;
+
+
 void setup()
 {
   
@@ -79,6 +80,7 @@ void setup()
   int homing_speed;
   int VELOCITY_MODE_POS, VELOCITY_MODE_NEG;
   homing_speed = 4000;
+  _delay_ms(100);
   
   pinMode(LDO_EN, OUTPUT);   // LDO_EN PIN
   digitalWrite(LDO_EN, LOW);  // DISABLE tmc5130 LDO "RESET"
@@ -121,18 +123,13 @@ void setup()
      These byte formats are already defined in the Arduino global name space. 
   */
 	
-//  modbus_configure(&Serial, 115200, SERIAL_8N2, 1, 2, HOLDING_REGS_SIZE, holdingRegs);
+  modbus_configure(&Serial, 19200, SERIAL_8N2, 1, 16, HOLDING_REGS_SIZE, holdingRegs);
 
-  // modbus_update_comms(baud, byteFormat, id) is not needed but allows for easy update of the
-  // port variables and slave id dynamically in any function.
-//  modbus_update_comms(115200, SERIAL_8N2, 1);
-  
         InitSPI();
        
   
         SPIWrite(CHOPCONF, 0x101D5);        
 	SPIWrite(IHOLD_IRUN, 0x70800);	//IHOLD and IRUN current
- //       SPIWrite(TPOWERDOWN, 0x10);	//
 
 	SPIWrite(RAMPMODE, 0x0);  //select position mode
         SPIWrite(A_1, 0x3E8);     //First  acceleration  /  deceleration  phase threshold velocity 
@@ -145,55 +142,7 @@ void setup()
 	SPIWrite(GCONF, 0x4);
 
         SPIWrite(XACTUAL, 0x0);	        //XACTUAL = 0
-	SPIWrite(XTARGET, 0xFFFF3800);	        //XTARGET = -51200
-
-//	SPIWrite(SW_MODE, 0x00);	//SWITCH REGISTER
-
-//	STALL_SPEED = 16777216 / homing_speed;
-//	STALL_SPEED = STALL_SPEED / 16;  // match homing speed to actual microstep speed (at 1/16 microstep)
-//	STALL_SPEED = STALL_SPEED * 1.10; // Activate stallGuard sligthly below desired homing velocity (provide 10% tolerance)
-
-//	SPIWrite(GCONF, 0x1080);	//stealthchop off for stallguard homing
-//	SPIWrite(0x6D, 0x00080000);//sgt <-- Entry the value determined for SGT: lower value=higher sensitivity (lower force for stall detection)
-//	SPIWrite(0x14, STALL_SPEED);//TCOOLTHRS
-//	SPIWrite(SW_MODE, 0x400);	//SWITCH REGISTER
-//	SPIWrite(AMAX, 100);	//AMAX for stallGuard homing shall be significantly lower than AMAX for printing
-
-	// Set velocity mode in direction to the endstop
-//	SPIWrite(RAMPMODE, VELOCITY_MODE_NEG);	//VELOCITY MODE negative Direction
-//	SPIWrite(VMAX, homing_speed);	        //Homing Speed in VMAX
-
-	//Enable Trinamic Drivers to start homing movement
-	//todo enable all chips every time?
-//	pinMode(38, OUTPUT);
-//	digitalWrite(38, LOW);
-//	pinMode(62, OUTPUT);
-//	digitalWrite(62, LOW);
-//	pinMode(56, OUTPUT);
-//	digitalWrite(56, LOW);
-//	pinMode(24, OUTPUT);
-//	digitalWrite(24, LOW);
-
-	//While motor is still moving (vzero != 1)
-//	while((SPIRead(RAMP_STAT) & 0x400) != 0x400);     // <--  spi read
-
-	// Endstop reached. Reset and retract
-//	SPIWrite(SW_MODE, 0x0);	        //SWITCH REGISTER
-//	SPIWrite(RAMPMODE, 0x3);	//HOLD Mode
-//	SPIWrite(GCONF, 0x1084);        //Turn on stealthchop again
-//	SPIWrite(XACTUAL, 0x0);	        //XACTUAL = 0
-//	SPIWrite(XTARGET, 0x0);	        //XTARGET = 0
-//	SPIWrite(RAMPMODE, 0x0);	//Position MODE
-//	_delay_ms(200);
-
-//	SPIWrite(VMAX, nominal_speed_x);//Velocity of X
-//	SPIWrite(AMAX, accel_x);//ACC of X
-//	SPIWrite(DMAX, accel_x);//DEC of X
-//	SPIWrite(VSTART, initial_speed_x);//Initial vel of X
-//	SPIWrite(VSTOP, final_speed_x);//Final vel of X
-
-
-  
+        SPIWrite(XTARGET,512000 );   // let make 10 turn for fun ...
 }
 
 void loop()
@@ -202,13 +151,20 @@ void loop()
   // count since the slave started. You don't have to use it but it's useful
   // for fault finding by the modbus master.
   
- // modbus_update();
+  modbus_update();  
   
-//  holdingRegs[ADC_VAL] = analogRead(A0); // update data to be read by the master to adjust the PWM
-  
-//  analogWrite(LED, holdingRegs[PWM_VAL]>>2); // constrain adc value from the arduino master to 255
-
-//  SPIWrite(holdingRegs[TMC5130_ADRESS_WRITE], holdingRegs[TMC5130_BYTE_1_WRITE]);// target
+// old test code  SPI_Reister = 0x12345678;  
+// old test code  holdingRegs [TMC5130_LOW_WORD]  =  (SPI_Reister >> 16) & 0xFFFF;   ; // update data to be read by the master to adjust the PWM
+// old test code  holdingRegs [TMC5130_HI_WORD]   =  SPI_Reister  & 0xFFFF;
+ 
+// if (SPI_Reister_old != SPI_Reister ) 
+//   { 
+     SPI_Reister =   holdingRegs[Modbus_Move_mm] * 700.49 ;   ///compute step per mm   
+     holdingRegs[TMC5130_LOW_WORD] = SPI_Reister;  //  return calculated mm value for debog 
+     SPIWrite(XTARGET,SPI_Reister );
+     SPI_Reister_old == SPI_Reister;  
+//   }
+   
   
 
   /* Note:
@@ -222,19 +178,3 @@ void loop()
   
 }
 
-//config1: .DB 0xEC, 0x00 ,0x01 ,0x00 ,0xC5 //SPI send: 0x EC 00 01 00 C5;  CHOPCONF: TOFF=5, HSTRT=4, HEND=1, TBL=2, CHM=0 (spreadCycle) 
-//config2: .DB 0x90, 0x00 ,0x06 ,0x1f ,0x0A //SPI send: 0x 90 00 06 1F 0A;  IHOLD_IRUN: IHOLD=10, IRUN=31 (max. current), IHOLDDELAY=6 
-//config3: .DB 0x91, 0x00 ,0x00 ,0x00 ,0x0A //SPI send: 0x 91 00 00 00 0A;  TPOWERDOWN=10: Delay before power down in stand still 
-//config4: .DB 0x80, 0x00 ,0x00 ,0x00 ,0x04 //SPI send: 0x 80 00 00 00 04;  EN_PWM_MODE=1 enables stealthChop (with default PWM_CONF) 
-//config5: .DB 0x93, 0x00 ,0x00 ,0x01 ,0xF4 //SPI send: 0x 93 00 00 01 F4;  TPWM_THRS=500 yields a switching velocity about 35000 = ca. 30RPM 
-//config6: .DB 0xF0, 0x00 ,0x04 ,0x01 ,0xC8 //SPI send: 0x F0 00 04 01 C8;/ PWM_CONF: AUTO=1, 2/1024 Fclk, Switch amplitude limit=200, Grad=1    
-
-//setup1: .DB 0xA4, 0x00 ,0x00 ,0x03 ,0xE8 //SPI send: A4 00 00 03 E8; A1 = 1 000 First acceleration
-//setup2: .DB 0xA5, 0x00 ,0x00 ,0xC3 ,0x50 //SPI send: A5 00 00 C3 50; V1 = 50 000 Acceleration threshold velocity V1
-//setup3: .DB 0xA6, 0x00 ,0x00 ,0x01 ,0xF4 //SPI send: A6 00 00 01 F4; AMAX = 500 Acceleration above V1
-//setup4: .DB 0xA7, 0x00 ,0x00 ,0x0D ,0x40 //SPI send: A7 00 03 0D 40; VMAX = 200 000
-//setup5: .DB 0xA8, 0x00 ,0x00 ,0x02 ,0xBC //SPI send: A8 00 00 02 BC; DMAX = 700 Deceleration above V1
-//setup6: .DB 0xAA, 0x00 ,0x00 ,0x05 ,0x78 //SPI send: AA 00 00 05 78; D1 = 1400 Deceleration below V1
-//setup7: .DB 0xAB, 0x00 ,0x00 ,0x00 ,0x0A //SPI send: AB 00 00 00 0A; VSTOP = 10 Stop velocity (Near to zero)
-//setup8: .DB 0xA0, 0x00 ,0x00 ,0x00 ,0x00 //SPI send: A0 00 00 00 00; RAMPMODE = 0 (Target position move)
-//move  : .DB 0xAD, 0xFF ,0xFF ,0x38 ,0x00 //SPI send: AD FF FF 38 00; XTARGET = -51200 (Move one rotation left (200*256 microsteps) 
