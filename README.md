@@ -4,6 +4,7 @@ TMC5130A Arduino Librarie
 Basic SPI for control TMC5130A Chip from Arduino
 
 the .ino have exemple code for move motor to desired position in milimeter via modbus
+
 that code was verry usefull for drive a StepIR antenna ;-)   
 
 this use modbus librarie from  https://github.com/pepsilla/Arduino/tree/master/MODBUS/ASCII/libraries/SimpleModbusSlave
