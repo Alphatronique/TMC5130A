@@ -5,13 +5,6 @@
 #include "fastio.h"
 #include "Arduino.h"
 
-//#include "Marlin.h"
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <inttypes.h>
-#include <util/delay.h>
-
 #define  FORCE_INLINE __attribute__((always_inline)) inline
 #define nop() asm volatile("nop")
 
