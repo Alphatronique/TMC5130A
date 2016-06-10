@@ -4,12 +4,26 @@
 // SPI Initialization
 void InitSPI()
 {
+//#define  LED 9  
+//#define  SPI_MODE 2  HI
+//#define  SD_MODE 3   LOW
+//#define  LDO_EN 4    LOW
+//   #define  SW_SEL 9    LOW 
+//#define  DRVIVE_ENABLE 15 	low
+	
+	
 	//Initialize chip select pin
-	uint8_t clr;
-//	DDRB |= (1<<7);
+	uint8_t clr;	
+	
 	DDRB |= 0x2c;
-//	DDRB = 0xFF;
-//	PORTC = 0xFF;
+	PORTB |= 0x2c;
+	
+//	_delay_ms(2000);		
+	
+	DDRD  = 0x00011100;
+	PORTD = 0x00000100;
+	DDRC  = 0x00000010;
+	PORTC = 0x00000000;
 
 	//Initialize SPI registers
 	clr=SPSR;
@@ -19,6 +33,9 @@ void InitSPI()
 	//Initialize SPI clock
 	SPCR = 0;
 	SPCR = (1<<SPE)|(1<<MSTR);//	4 MHz
+	
+//	_delay_ms(500);	
+	PORTD = 0x00010100;  // active LDO
 }
 
 
