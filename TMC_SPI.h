@@ -3,6 +3,7 @@
 
 #include "TMC_SPI.h"
 #include "fastio.h"
+#include "Arduino.h"
 
 //#include "Marlin.h"
 //#include <stdio.h>

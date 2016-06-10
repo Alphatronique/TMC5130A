@@ -4,38 +4,27 @@
 // SPI Initialization
 void InitSPI()
 {
-//#define  LED 9  
-//#define  SPI_MODE 2  HI
-//#define  SD_MODE 3   LOW
-//#define  LDO_EN 4    LOW
-//   #define  SW_SEL 9    LOW 
-//#define  DRVIVE_ENABLE 15 	low
+		//Initialize chip select pin
+	uint8_t clr;
 	
-	
-	//Initialize chip select pin
-	uint8_t clr;	
-	
-	DDRB |= 0x2c;
-	PORTB |= 0x2c;
-	
-//	_delay_ms(2000);		
-	
-	DDRD  = 0x00011100;
-	PORTD = 0x00000100;
-	DDRC  = 0x00000010;
-	PORTC = 0x00000000;
+  pinMode(SCK, OUTPUT);
+  pinMode(MOSI, OUTPUT);
+  pinMode(SS, OUTPUT);
+  pinMode(15 , OUTPUT);  // DRVIVE_ENABLE 
+   
+  digitalWrite(SCK, LOW);
+  digitalWrite(MOSI, LOW);
+  digitalWrite(SS, HIGH);
+  digitalWrite(15, LOW); 
 
 	//Initialize SPI registers
 	clr=SPSR;
 	clr=SPDR;
-	_delay_ms(10);
+	delay(10);
 
 	//Initialize SPI clock
 	SPCR = 0;
 	SPCR = (1<<SPE)|(1<<MSTR);//	4 MHz
-	
-//	_delay_ms(500);	
-	PORTD = 0x00010100;  // active LDO
 }
 
 
@@ -93,56 +82,6 @@ void InitSPI()
 
 		return register_value;
  }
-
-
-
-//// Sends 5 packages (40 Bit)
-// void SPIWrite(uint8_t address, uint32_t instruction, uint8_t csPin)
-//{
-//	uint8_t DATA1, DATA2, DATA3, DATA0;
-//
-//	DATA0 = 0;
-//	DATA1 = 0;
-//	DATA2 = 0;
-//	DATA3 = 0;
-//
-//	DATA0 = instruction & 0xFF;
-//	DATA1 = (instruction & 0xFF00) >> 8;
-//	DATA2 = (instruction & 0xFF0000) >> 16;
-//	DATA3 = (instruction & 0xFF000000) >> 24;
-//
-//	address = address | 0x80;
-//
-//	PORTB &= ~(1 << csPin); //csPin Low
-//
-//	ReadWriteSPI(address);
-//	nop();
-//	nop();
-//	nop();
-//	ReadWriteSPI(DATA3);
-//	nop();
-//	nop();
-//	nop();
-//	ReadWriteSPI(DATA2);
-//	nop();
-//	nop();
-//	nop();
-//	ReadWriteSPI(DATA1);
-//	nop();
-//	nop();
-//	nop();
-//	ReadWriteSPI(DATA0);
-//	nop();
-//	nop();
-//	nop();
-//
-//	PORTB |= (1 << csPin);//csPin High
-//}
-
-
-
- // Sends 5 packages (40 Bit)
-
 
 uint8_t SPIRead_Status_Bits()
 {
